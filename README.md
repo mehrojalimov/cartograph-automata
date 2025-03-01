@@ -1,8 +1,11 @@
 <div align="center">
-  <img src="/api/placeholder/400/300" alt="Lorem Ipsum" align="center" width="400px"/>
-  <h1>Lorem Ipsum</h1>
-  <p>By Rokawoo, Koy, Arya, Mehroj</p>
+  <img src="demos/S1.png" alt="Demo Image 1" align="center" width="400px"/>
+  <img src="demos/S2.png" alt="Demo Image 2" align="center" width="400px"/>
+  <h1>Cartograph Automata</h1>
+  <p>By Rokawoo, Khoi, Arya, Mehroj</p>
 </div>
+
+
 
 > [!CAUTION]
 > :star: Our Codefest Project is really Based!
