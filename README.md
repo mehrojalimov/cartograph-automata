@@ -12,7 +12,7 @@
 
 ## Abstract
 
-Current AMR navigation relies heavily on basic sensor systems like LIDAR and ultrasonic sensors, which simply detect obstacles and follow predetermined rules without true environmental understanding. ____ bridges this gap by creating a hybrid system where computer vision not only detects obstacles but intelligently interprets the environment to make contextual decisions. 
+Current AMR navigation relies heavily on basic sensor systems like LIDAR and ultrasonic sensors, which simply detect obstacles and follow predetermined rules without true environmental understanding. Cartograph Automata bridges this gap by creating a hybrid system where computer vision not only detects obstacles but intelligently interprets the environment to make contextual decisions. 
 
 By translating visual data into movement commands, our model enables robots to safely navigate around obstacles and people in real-time, even when encountering previously unseen scenarios. This proof-of-concept demonstrates how CV-enhanced navigation significantly improves safety and efficiency in both warehouse, public settings, and applications beyond, allowing AMRs to dynamically adapt to changing conditions while maintaining operational objectives.
 
@@ -25,9 +25,10 @@ The system's ability to decide when to deviate from programmed paths and when to
 ## Project Media
 
 <div align="center">
-  <img src="/api/placeholder/400/300" alt="Lorem Ipsum"/>
-  <img src="/api/placeholder/400/300" alt="Lorem Ipsum"/>
-  <img src="/api/placeholder/400/300" alt="Lorem Ipsum"/>
+  <img src="/demos/seq1_center_20250228-043837.png" alt="D1" width="400px"/>
+  <img src="/demos/seq37_center_20250228-042041.png" alt="D2" width="400px"/>
+  <img src="/demos/seq34_left_20250228-043507.png" alt="D3" width="400px"/>
+  <img src="/demos/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
 </div>
 
 ## :mag: Key Features
