@@ -31,6 +31,15 @@ The system's ability to decide when to deviate from programmed paths and when to
   <img src="/demos/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
 </div>
 
+## Obejct Detection
+
+<div align="center">
+  <img src="/demos/object_detection2.png" alt="D1" width="400px"/>
+  <img src="/demos/object_detection3.png" alt="D1" width="400px"/>
+  <img src="/demos/object_detection4.png" alt="D1" width="400px"/>
+  <img src="/demos/object_detection5.png" alt="D1" width="400px"/>
+</div>
+
 ## :mag: Key Features
 
 - **Intelligent Path Deviation**: Makes contextual decisions about when to leave programmed paths
