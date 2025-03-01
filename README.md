@@ -35,7 +35,7 @@ The system's ability to decide when to deviate from programmed paths and when to
 - **Simulation Validated**: Tested in various Webots environments including warehouses and public spaces
 - **Hybrid Sensing Integration**: Combines traditional sensors with computer vision for robust navigation
 
-## :tools: Libraries and Tools Used
+## 🛠️ Libraries and Tools Used
 
 - **TensorFlow Model Zoo**: For fine-tuning the SSD ResNet50 V1 FPN 640x640 (RetinaNet50) model
 - **Webots**: Professional robot simulator for testing and validation
