@@ -20,7 +20,7 @@ DEFAULT_SPEED = 1.5  # Default speed for movement
 # This is the ratio between desired angle and actual turning angle
 # 90 degrees (1.5708 rad) desired resulted in 0.518768 rad actual
 # So the correction factor is approximately 3.03
-ANGLE_CORRECTION_FACTOR = 1.5708 / 0.518768  # ≈ 3.03
+ANGLE_CORRECTION_FACTOR = 3.15  # ≈ 3.03
 
 # Global robot and motor references
 robot = None
@@ -52,12 +52,27 @@ def init_robot(robot_instance):
     stop()
 
 
-def stop():
-    """Stop all motors."""
+def stop(duration_seconds=0):
+    """
+    Stop all motors and optionally wait for a specified duration.
+    
+    Args:
+        duration_seconds: Optional time to wait in seconds after stopping
+    """
+    # First stop all motors
     front_left_motor.setVelocity(0.0)
     front_right_motor.setVelocity(0.0)
     rear_left_motor.setVelocity(0.0)
     rear_right_motor.setVelocity(0.0)
+    
+    # If a wait duration is specified, advance the simulation
+    if duration_seconds > 0 and robot is not None:
+        # Calculate number of time steps needed
+        steps_needed = int((duration_seconds * 1000) / TIME_STEP)
+        
+        # Run the robot for the calculated number of steps
+        for _ in range(steps_needed):
+            robot.step(TIME_STEP)
 
 
 def normalize_angle(degrees):
@@ -307,11 +322,13 @@ if __name__ == "__main__":
         
         # Perform a simple left turn test with normalization
         print(f"Testing left turn movement (90 degrees with correction factor {ANGLE_CORRECTION_FACTOR})...")
+        stop(1)
+        move_forward(20.0)
         turn_left(90)
         turn_right(90)
         move_forward(1.0)
         move_backward(1.0)
-        stop()
+        stop(1)
         print("Left turn completed")
         
         # Wait a bit
