@@ -1,0 +1,413 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/ThreadMetalPlate.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/apartment_structure/protos/Door.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/GlossyPaint.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/obstacles/protos/OilBarrel.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/CardboardBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/hospital/protos/EmergencyExitSign.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/stairs/protos/StraightStairsRail.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/stairs/protos/StraightStairs.proto"
+EXTERNPROTO "../protos/ShelfD.proto"
+EXTERNPROTO "../protos/ShelfE.proto"
+EXTERNPROTO "../protos/ShelfF.proto"
+EXTERNPROTO "../protos/Wall.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/Roughcast.proto"
+EXTERNPROTO "../protos/PalletJackB.proto"
+EXTERNPROTO "../protos/ClutteringA.proto"
+EXTERNPROTO "../protos/Lamp.proto"
+EXTERNPROTO "../protos/TrashCanC.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/pallet/protos/WoodenPalletStack.proto"
+EXTERNPROTO "../protos/DeskC.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/PlasticCrate.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/pallet/protos/WoodenPallet.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/gas_canister/protos/GasCanister.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/fire_extinguisher/protos/FireExtinguisher.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/husarion/rosbot/protos/Rosbot.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/humans/pedestrian/protos/Pedestrian.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.24394052439975605 0.36401850295533905 -0.8988790519651271 1.2812550448570366
+  position -17.726434273520344 32.185927223421444 24.83205603079662
+  follow "lamp(2)"
+  followType "None"
+}
+TexturedBackground {
+  texture "noon_cloudy_empty"
+}
+PointLight {
+  attenuation 0 0 1
+  intensity 10.8
+  location -4 6 5
+  castShadows TRUE
+}
+PointLight {
+  attenuation 0 0 1
+  intensity 9.6
+  location 5 6 5
+}
+Floor {
+  translation 0 -4.3 0
+  name "floor(1)"
+  size 20 16.4
+  tileSize 1 1
+  appearance ThreadMetalPlate {
+    IBLStrength 5
+  }
+}
+Rosbot {
+  translation -6.99 1.18 0
+  controller "<none>"
+}
+Pedestrian {
+  translation -10.02 -0.03 1.27
+  rotation 0 0 1 3.14159
+}
+WoodenPallet {
+  translation 2.8905 -4.85244 0.532748
+  rotation 0.4874269742762859 -0.22284598823941473 0.8442479554452376 2.4048653071795862
+  name "wooden pallet(2)"
+}
+GasCanister {
+  translation -8.81794 -8.23768 0
+  rotation 0 0 1 0.523599
+}
+GasCanister {
+  translation -9.32 -8.5 0
+  rotation 0 0 1 -0.523595307179586
+  name "gas canister(1)"
+}
+GasCanister {
+  translation -9.65 -9.26 0.15
+  rotation 0.25056206820525934 -0.9351132545462786 -0.25056306820553154 -1.6378353071795866
+  name "gas canister(2)"
+}
+TrashCanC {
+  translation 9.06 -2.89 0
+  rotation 0 0 -0.9999999999999999 1.5707953071795862
+}
+Lamp {
+  translation 7 -9 -5
+  name "lamp(2)"
+}
+ShelfE {
+  translation 5.3 -6 0
+  rotation 0 0 1 1.5708
+  name "shelfE(4)"
+}
+ShelfD {
+  translation -5.5 -6 0
+  rotation 0 0 -0.9999999999999999 1.5707996938995747
+  name "shelfD(2)"
+}
+ShelfD {
+  translation 8.74 -6 0
+  rotation 0 0 -0.9999999999999999 1.67
+  name "shelfD(3)"
+}
+ShelfE {
+  translation -0.5 -6 0
+  rotation 0 0 1 1.5708
+  name "shelfE(3)"
+}
+ShelfE {
+  translation -8.72835 -5.96707 0
+  rotation 0 0 1 1.4708
+  name "shelfE(1)"
+}
+ClutteringA {
+  translation -3.83744 -1.11737 0
+  rotation 0 0 1 0.261803
+}
+PalletJackB {
+  translation 4.333 -3.26 0
+  rotation 0 0 1 2.0944
+}
+ShelfD {
+  translation 5.3 -1.7 0
+  rotation 0 0 -0.9999999999999999 1.5707953071795862
+}
+ShelfD {
+  translation -0.5 -1.7 0
+  rotation 0 0 1 1.5708
+  name "shelfD(1)"
+}
+ShelfE {
+  translation -5.5 -1.7 0
+  rotation 0 0 1 -1.5707953071795862
+}
+ShelfE {
+  translation 2.4 -1.7 0
+  rotation 0 0 1 1.5708
+  name "shelfE(2)"
+}
+ShelfF {
+  translation -4.18749e-05 -11.4 -1.76
+  rotation 0 0 -1 1.5708
+}
+Door {
+  translation 10.04 -4 3.27
+  rotation 0 0 1 3.141592
+  name "door(1)"
+  doorAppearance GlossyPaint {
+    baseColor 0.16 0.16 0.16
+  }
+  frameAppearance GlossyPaint {
+    baseColor 0.35 0.3503166247043564 0.35
+  }
+}
+OilBarrel {
+  translation 9.337425 2.8961435 0.44
+  rotation 0 0 1 2.87325
+  name "oil barrel(1)"
+}
+OilBarrel {
+  translation 8.4218847 2.1373536 0.44
+  rotation 0 0 1 2.87325
+  name "oil barrel(2)"
+}
+OilBarrel {
+  translation 8.2750954 3.0222101 0.44
+  rotation 0 0 1 -0.340335
+}
+Door {
+  translation -10.05 0 0.02
+  doorAppearance GlossyPaint {
+    baseColor 0.16 0.16 0.16
+  }
+  frameAppearance GlossyPaint {
+    baseColor 0.35 0.3503166247043564 0.35
+  }
+}
+CardboardBox {
+  translation 9.22188 2.07391 0.31
+  rotation 0 0 1 -1.8325953071795862
+}
+Lamp {
+  translation -6.9 -9 -5
+  name "lamp(3)"
+}
+Lamp {
+  translation 0.05 -9 -5
+  name "lamp(5)"
+}
+EmergencyExitSign {
+  translation 9.82 -4.02 5.45
+  rotation 0.5773509358560258 -0.577349935856137 -0.577349935856137 2.09439
+}
+EmergencyExitSign {
+  translation -9.83 -0.01 2.3
+  rotation 0.5773489358550934 0.5773519358547601 0.5773499358549823 2.0944
+  name "emergency exit sign(1)"
+}
+Solid {
+  translation 9.25 -3.95 3.21
+  rotation 1 0 0 1.5707963267948966
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.8
+        baseColorMap ImageTexture {
+          url [
+            "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/steel_floor.jpg"
+          ]
+        }
+        roughness 0.5
+        metalness 0
+        textureTransform TextureTransform {
+          scale 2 2
+        }
+      }
+      geometry Box {
+        size 1.5 0.12 2.6
+      }
+    }
+  ]
+}
+StraightStairsRail {
+  translation 8.52 -2.73 3.27
+  rotation 0 0 1 -1.5708
+  name "straight stairs rail(1)"
+  run 2.5
+  rise 0
+  newelHeight 0.89
+  balusterHeight 0.9
+  nBalusters 9
+  appearance PBRAppearance {
+    baseColor 0.8 0.8 0.8
+    roughness 0.5
+    metalness 0
+    textureTransform TextureTransform {
+      rotation 1.5708
+    }
+  }
+}
+StraightStairsRail {
+  translation 8.57 -5.23 3.27
+  run 1.3
+  rise 0
+  newelHeight 0.89
+  balusterHeight 0.9
+  nBalusters 5
+  appearance PBRAppearance {
+    baseColor 0.8 0.8 0.8
+    roughness 0.5
+    metalness 0
+    textureTransform TextureTransform {
+      rotation 1.5708
+    }
+  }
+}
+StraightStairs {
+  translation 9.201 0.17 0
+  rotation 0 0 1 -1.5708
+  stepSize 0.3 1.34 0.01
+  stepRise 0.297
+  nSteps 10
+  stepAppearance PBRAppearance {
+    baseColor 0.8 0.8 0.8
+    roughness 0.5
+    metalness 0
+    textureTransform TextureTransform {
+      rotation 1.5708
+      scale 3 1
+    }
+  }
+  stringerAppearance PBRAppearance {
+    baseColor 0.8 0.8 0.8
+    roughness 0.5
+    metalness 0
+    textureTransform TextureTransform {
+      rotation 1.5708
+      scale 3 3
+    }
+  }
+  leftRail []
+  rightRail [
+    StraightStairsRail {
+      run 3
+      rise 2.97
+      newelHeight 0.862
+      balusterHeight 0.83
+      nBalusters 12
+      appearance PBRAppearance {
+        baseColor 0.8 0.8 0.8
+        roughness 0.5
+        metalness 0
+        textureTransform TextureTransform {
+          rotation 1.5708
+        }
+      }
+    }
+  ]
+}
+Wall {
+  translation -7.015 -3.945 0
+  size 0.15 10.1 0.005
+  appearance Roughcast {
+    colorOverride 0 0.498039 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 6.835 -3.945 0
+  name "wall(1)"
+  size 0.15 10.1 0.005
+  appearance Roughcast {
+    colorOverride 0 0.498039 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation -0.0900004 -9.07 0
+  rotation 0 0 1 1.5708
+  name "wall(2)"
+  size 0.15 14 0.005
+  appearance Roughcast {
+    colorOverride 0 0.498039 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation -0.090038 1.18 0
+  rotation 0 0 1 1.5708
+  name "wall(3)"
+  size 0.15 14 0.005
+  appearance Roughcast {
+    colorOverride 0 0.498039 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Lamp {
+  translation -6.9 1.2 -5
+}
+Lamp {
+  translation 0.05 1.2 -5
+  name "lamp(4)"
+}
+Lamp {
+  translation 7 1.2 -5
+  name "lamp(1)"
+}
+WoodenPalletStack {
+  translation -8.78252 -2.93698 0
+  rotation 0 0 1 0.261799
+}
+WoodenPalletStack {
+  translation -8.91181 -1.63235 0
+  rotation 0 0 1 -5.307179586466759e-06
+  name "wooden pallet stack(1)"
+}
+DeskC {
+  translation -9.075 2.90206 0
+  rotation 0 0 1 -0.523595307179586
+}
+PlasticCrate {
+  translation 9.23882 -1.72746 0.14
+  rotation 0 0 1 0.261803
+}
+WoodenPallet {
+  translation 9.23366 -1.56294 0
+  rotation 0 0 -1 -1.326995307179586
+  name "wooden pallet(1)"
+}
+WoodenPallet {
+  translation -9.18 -1.04299 0.578102
+  rotation -0.5199890554929749 0.5199860554926548 0.6776620723197613 1.95044
+}
+FireExtinguisher {
+  translation -9.67 2.15 0
+  rotation 0 0 -1 -1.5708053071795867
+}
+CardboardBox {
+  translation 2.01942 -4.09854 0.3
+  rotation 0 0 1 1.8326
+  name "cardboard box(1)"
+}
+CardboardBox {
+  translation 2.78204 -4.24457 0.3
+  rotation 0 0 -1 -1.3090053071795866
+  name "cardboard box(2)"
+}
+CardboardBox {
+  translation 2.34566 -4.66391 0.3
+  rotation 0 0 1 1.5708
+  name "cardboard box(3)"
+}
+CardboardBox {
+  translation 2.43566 -4.28391 0.91
+  rotation 0 0 1 1.5708
+  name "cardboard box(4)"
+}
