@@ -25,8 +25,8 @@ PROTO Rosbot [
   field  SFBool      selfCollision   FALSE     # Is `Robot.selfCollision`.
   field  MFNode      cameraSlot      [ Astra { name "camera" } ] # Extends the robot with an Astra RGBD camera.
   field  MFNode      lidarSlot       [ RpLidarA2 { name "laser" } ] # Extends the robot with a RpLidar A2 lidar.
-  field  MFNode      gpsSlot         [ RpLidarA2 { name "gps" } ] # Extends the robot with a RpLidar A2 gps.
-  field  MFNode      compassSlot     [ RpLidarA2 { name "compass" } ] # Extends the robot with a RpLidar A2 compass.
+  field  MFNode      gpsSlot         [ GPS { name "gps" } ] # Extends the robot with a RpLidar A2 gps.
+  field  MFNode      compassSlot     [ Compass { name "compass" } ] # Extends the robot with a RpLidar A2 compass.
 ]
 {
   Robot {
