@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="/api/placeholder/400/300" alt="Lorem Ipsum" align="center" width="400px"/>
-  <h1>Lorem Ipsum</h1>
+  <img src="/api/placeholder/400/300" alt="Cartograph Automa" align="center" width="400px"/>
+  <h1>Cartograph Automa</h1>
   <p>By Rokawoo, Koy, Arya, Mehroj</p>
 </div>
 
