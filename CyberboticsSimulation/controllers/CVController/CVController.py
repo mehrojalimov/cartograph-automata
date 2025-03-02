@@ -1,12 +1,13 @@
 """
-Robot Navigation System
+Multi-Goal Robot Navigation System
 
-This module controls a robot to autonomously navigate to a predefined goal position
-using GPS-based heading estimation and simple navigation algorithms.
+This module controls a robot to autonomously navigate through a sequence of predefined 
+goal positions using GPS-based heading estimation and simple navigation algorithms.
 
-The robot uses GPS to determine its position, calculates the heading to the goal,
-and adjusts its movement accordingly by turning or moving forward until it reaches
-the target location.
+The robot uses GPS to determine its position, calculates the heading to the current goal,
+and adjusts its movement accordingly by turning or moving forward. When each goal is reached,
+the robot automatically proceeds to the next goal in the sequence, looping back to the first
+goal after reaching the final one.
 
 Usage:
     Run this script directly with a properly configured Webots robot simulation
@@ -19,7 +20,12 @@ from MovementFunctions import init_robot, turn_left, turn_right, move_forward, s
 
 # Constants
 TIME_STEP = 32
-GOAL_POSITION = [-3.67, 1.18, -0.00293147]
+GOAL_POSITIONS = [
+    [6.84, 1.18, -0.0101735],            # Goal 1
+    [6.84, -9.07, -0.0101776],           # Goal 2
+    [-7.01, -9.07, -0.000634254],        # Goal 3
+    [-7.02, 1.18, -0.000623302]          # Goal 4
+]
 ANGLE_THRESHOLD = 5   # Stop turning if within ±5 degrees
 DISTANCE_THRESHOLD = 1  # Stop moving if within 1m of the goal
 TURN_SCALE = 0.5  # Proportional turning to prevent oscillations
@@ -79,26 +85,36 @@ def main():
     gps = robot.getDevice("gps")
     gps.enable(TIME_STEP)
     
-    # Initialize previous position
+    # Initialize previous position and current goal index
     previous_position = None
+    current_goal_index = 0
     
+    # Main control loop
     while robot.step(TIME_STEP) != -1:
         # Get current position
         current_position = gps.getValues()
+        
+        # Get current goal position
+        current_goal = GOAL_POSITIONS[current_goal_index]
         
         # If we don't have a previous position yet, set it and continue
         if previous_position is None:
             previous_position = current_position
             continue
         
-        # Compute distance to goal
-        distance_to_goal = calculate_distance(current_position, GOAL_POSITION)
+        # Compute distance to current goal
+        distance_to_goal = calculate_distance(current_position, current_goal)
         
-        # Stop if the robot is close enough to the goal
+        # Check if the robot has reached the current goal
         if distance_to_goal < DISTANCE_THRESHOLD:
-            print("🏁 Goal reached! Stopping robot.")
-            stop()
-            break
+            print(f"🏁 Goal {current_goal_index + 1} reached!")
+            
+            # Move to the next goal
+            current_goal_index = (current_goal_index + 1) % len(GOAL_POSITIONS)
+            next_goal = GOAL_POSITIONS[current_goal_index]
+            
+            print(f"🎯 Setting new target: Goal {current_goal_index + 1} at position {next_goal}")
+            continue
         
         # Estimate the robot's current heading using GPS movement
         estimated_heading = calculate_heading(previous_position, current_position)
@@ -110,17 +126,19 @@ def main():
             continue
         
         # Compute goal heading
-        goal_heading = calculate_heading(current_position, GOAL_POSITION)
+        goal_heading = calculate_heading(current_position, current_goal)
         
         # Compute the angle difference and normalize
         angle_to_turn = normalize_angle(goal_heading - estimated_heading)
         
-        print(f"📍 Distance to Goal: {distance_to_goal:.2f}m | Estimated Heading: {estimated_heading:.2f}° | Goal Heading: {goal_heading:.2f}° | Angle to Turn: {angle_to_turn:.2f}°")
+        print(f"📍 Goal {current_goal_index + 1} | Distance: {distance_to_goal:.2f}m | Heading: {estimated_heading:.2f}° | Goal Heading: {goal_heading:.2f}° | Angle to Turn: {angle_to_turn:.2f}°")
         
         # If the robot is aligned with the goal, move forward
         if abs(angle_to_turn) < ANGLE_THRESHOLD:
             print("✔️ Aligned with goal. Moving forward.")
-            move_forward(distance_to_goal)
+            # Move a bit at a time to avoid overshooting
+            move_distance = min(distance_to_goal, 2.0)  # Move up to 2 meters at a time
+            move_forward(move_distance)
         else:
             # Calculate proportional turn amount with clamping
             turn_amount = min(max(abs(angle_to_turn) * TURN_SCALE, MIN_TURN_ANGLE), MAX_TURN_ANGLE)
