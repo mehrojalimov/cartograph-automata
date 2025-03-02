@@ -3,12 +3,10 @@
 """
 Final Refined Real-time Object Detection and Path Planning Controller
 """
-
 import sys
 import os
 # Make sure this is the first thing in your script
 sys.path.insert(0, "C:/Users/rokaw/GitProjects/Codefest2025 - TEMP/CVObjectDetection/Tensorflow/models/research")
-
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -59,40 +57,43 @@ def extract_obstacles_from_detections(detections, category_index, height, width)
     
     # Process detection data
     num_detections = int(detections.pop('num_detections'))
+    # Pre-allocate memory for detections
     detections = {key: value[0, :num_detections].numpy()
                  for key, value in detections.items()}
     detections['num_detections'] = num_detections
     detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
     
-    # Get detection data
+    # Get detection data - extract once to avoid repeated dictionary lookups
     boxes = detections['detection_boxes']
     classes = detections['detection_classes']
     scores = detections['detection_scores']
     
-    for i in range(len(scores)):
-        if scores[i] >= DETECTION_THRESHOLD:
-            class_id = int(classes[i]) + 1  # Adjust for label offset
-            if class_id in category_index:
-                class_name = category_index[class_id]['name']
-                
-                # Convert normalized coordinates to pixel coordinates
-                ymin, xmin, ymax, xmax = boxes[i]
-                xmin_px, ymin_px = int(xmin * width), int(ymin * height)
-                xmax_px, ymax_px = int(xmax * width), int(ymax * height)
-                
-                # Create rectangle vertices
-                bbox = np.array([
-                    [xmin_px, ymin_px], 
-                    [xmax_px, ymin_px], 
-                    [xmax_px, ymax_px], 
-                    [xmin_px, ymax_px]
-                ], dtype=int)
-                
-                if class_name in CLASSES_TO_AVOID:
-                    obstacles.append(bbox)
-                    class_names.append(class_name)
-                elif class_name == 'line':
-                    line_boxes.append(bbox)
+    # Pre-filter based on threshold to avoid unnecessary processing
+    valid_indices = np.where(scores >= DETECTION_THRESHOLD)[0]
+    
+    for i in valid_indices:
+        class_id = int(classes[i]) + 1  # Adjust for label offset
+        if class_id in category_index:
+            class_name = category_index[class_id]['name']
+            
+            # Convert normalized coordinates to pixel coordinates
+            ymin, xmin, ymax, xmax = boxes[i]
+            xmin_px, ymin_px = int(xmin * width), int(ymin * height)
+            xmax_px, ymax_px = int(xmax * width), int(ymax * height)
+            
+            # Create rectangle vertices
+            bbox = np.array([
+                [xmin_px, ymin_px], 
+                [xmax_px, ymin_px], 
+                [xmax_px, ymax_px], 
+                [xmin_px, ymax_px]
+            ], dtype=np.int32)  # Explicitly use int32 for OpenCV compatibility
+            
+            if class_name in CLASSES_TO_AVOID:
+                obstacles.append(bbox)
+                class_names.append(class_name)
+            elif class_name == 'line':
+                line_boxes.append(bbox)
     
     return obstacles, class_names, line_boxes, detections
 
@@ -108,12 +109,16 @@ def is_line_blocked(x, obstacles):
 def find_blocked_path_segments(width, obstacles, step=PATH_STEP_SIZE):
     """Find start and end points of blocked path segments for efficient drawing
     Returns a list of tuples (start_x, end_x) for each blocked segment"""
+    if not obstacles:  # Early return if no obstacles
+        return []
+        
     blocked_segments = []
     in_blocked_area = False
     start_x = None
     
     for x in range(0, width, step):
-        if is_line_blocked(x, obstacles):
+        is_blocked = is_line_blocked(x, obstacles)
+        if is_blocked:
             if not in_blocked_area:
                 start_x = x
                 in_blocked_area = True
@@ -130,11 +135,15 @@ def find_blocked_path_segments(width, obstacles, step=PATH_STEP_SIZE):
 
 def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     """Identify leftmost and rightmost x-coordinates of clear paths, centered at 0."""
+    if not obstacles:  # Early return if no obstacles - full width is clear
+        half_width = width // 2
+        return [(-half_width, width - 1 - half_width)]
+        
     half_width = width // 2
     clear_x = []
     in_clear_area = False
     left_boundary = None
-
+    
     for x in range(0, width, step):
         is_blocked = is_line_blocked(x, obstacles)
         if not is_blocked:  # Clear path
@@ -145,43 +154,49 @@ def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
             if in_clear_area:
                 clear_x.append((left_boundary, (x - step) - half_width))  # Convert to centered coordinates
                 in_clear_area = False
-
+    
     if in_clear_area:  # If last section was clear, close it
         clear_x.append((left_boundary, (width - 1) - half_width))
-
+        
     return clear_x
 
 def get_central_clearance(height, width, obstacles):
     """Find vertical clearance from the bottom to the first obstacle in the center."""
+    if not obstacles:  # Early return if no obstacles
+        return height
+        
     center_x = width // 2
     min_y_max = height  # Default to full height (no obstacle case)
-
+    
     for bbox in obstacles:
-        x_min, _, x_max, y_max = bbox.min(axis=0)[0], bbox.min(axis=0)[1], bbox.max(axis=0)[0], bbox.max(axis=0)[1]
-
+        x_min, _ = bbox.min(axis=0)
+        x_max, y_max = bbox.max(axis=0)
         if x_min <= center_x <= x_max:  # If the obstacle covers the center x
             min_y_max = min(min_y_max, y_max)  # Find the closest obstacle from the bottom
-
+    
     # Return the distance from the bottom to the obstacle
     return height - min_y_max if min_y_max != height else height
 
 def draw_path_lines(image, blocked_segments, height, alpha=0.5):
     """Draw transparent lines with solid borders for blocked paths"""
-    # Create a separate image for the lines
+    if not blocked_segments:  # Skip if no blocked segments
+        return image
+        
+    # Create a separate image for the lines (only allocate memory if needed)
     line_img = np.zeros_like(image)
     border_img = np.zeros_like(image)
     
+    color_red = (0, 0, 255)  # Pre-define color tuple to avoid recreating it in loops
+    
     for start_x, end_x in blocked_segments:
         # Calculate the range of x values for this segment
-        segment_width = end_x - start_x + PATH_STEP_SIZE
-        
         # Draw transparent lines for the entire blocked segment
         for x in range(start_x, end_x + PATH_STEP_SIZE, PATH_STEP_SIZE):
-            cv2.line(line_img, (x, 0), (x, height), (0, 0, 255), 1)
+            cv2.line(line_img, (x, 0), (x, height), color_red, 1)
         
         # Draw solid borders at the start and end of each blocked segment
-        cv2.line(border_img, (start_x, 0), (start_x, height), (0, 0, 255), 2)
-        cv2.line(border_img, (end_x + PATH_STEP_SIZE, 0), (end_x + PATH_STEP_SIZE, height), (0, 0, 255), 2)
+        cv2.line(border_img, (start_x, 0), (start_x, height), color_red, 2)
+        cv2.line(border_img, (end_x + PATH_STEP_SIZE, 0), (end_x + PATH_STEP_SIZE, height), color_red, 2)
     
     # Blend the transparent lines
     result = cv2.addWeighted(image, 1.0, line_img, alpha, 0)
@@ -192,13 +207,21 @@ def draw_path_lines(image, blocked_segments, height, alpha=0.5):
 
 def draw_obstacle_labels(image, obstacles, class_names):
     """Draw red bounding boxes for obstacles with red text labels at bottom"""
+    if not obstacles:  # Skip if no obstacles
+        return image
+        
+    color_red = (0, 0, 255)  # Pre-define color tuple
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    font_thickness = 1
+    
     for i, bbox in enumerate(obstacles):
         # Get corner points
         x_min, y_min = bbox.min(axis=0)
         x_max, y_max = bbox.max(axis=0)
         
         # Draw red rectangle
-        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color_red, 2)
         
         # Add class label with proper name at the bottom
         class_name = class_names[i] if i < len(class_names) else "Unknown"
@@ -206,10 +229,7 @@ def draw_obstacle_labels(image, obstacles, class_names):
         class_name = class_name.capitalize()
         
         # Calculate text size to better position the label
-        font_scale = 0.5
-        font_thickness = 1
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        (text_width, text_height), baseline = cv2.getTextSize(
+        (text_width, text_height), _ = cv2.getTextSize(
             class_name, font, font_scale, font_thickness)
         
         # Position the text at the bottom of the box, centered horizontally
@@ -218,29 +238,32 @@ def draw_obstacle_labels(image, obstacles, class_names):
         
         # Draw the text in red with no background
         cv2.putText(image, class_name, (text_x, text_y), 
-                   font, font_scale, (0, 0, 255), font_thickness)  # Red text
+                   font, font_scale, color_red, font_thickness)
     
     return image
 
 def draw_line_boxes(image, line_boxes):
     """Draw yellow bounding boxes around lines with yellow text at top"""
+    if not line_boxes:  # Skip if no line boxes
+        return image
+        
+    color_yellow = (0, 255, 255)  # Pre-define color tuple
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    font_thickness = 1
+    label = "Line"  # Pre-define label
+    
+    # Pre-calculate label text size since it's the same for all boxes
+    (text_width, text_height), _ = cv2.getTextSize(
+        label, font, font_scale, font_thickness)
+    
     for bbox in line_boxes:
         # Get corner points
         x_min, y_min = bbox.min(axis=0)
         x_max, y_max = bbox.max(axis=0)
         
         # Draw yellow rectangle
-        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 255), 2)  # Yellow box
-        
-        # Add "Line" label at the top
-        label = "Line"
-        
-        # Calculate text size for positioning
-        font_scale = 0.5
-        font_thickness = 1
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        (text_width, text_height), baseline = cv2.getTextSize(
-            label, font, font_scale, font_thickness)
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color_yellow, 2)
         
         # Position the text at the top of the box, centered horizontally
         text_x = x_min + (x_max - x_min - text_width) // 2
@@ -248,13 +271,18 @@ def draw_line_boxes(image, line_boxes):
         
         # Draw the text in yellow with no background
         cv2.putText(image, label, (text_x, text_y), 
-                   font, font_scale, (0, 255, 255), font_thickness)  # Yellow text
+                   font, font_scale, color_yellow, font_thickness)
     
     return image
 
 def visualize_combined(image, obstacles, class_names, line_boxes, clear_paths, center_clearance, show_paths=True, show_boxes=True):
     """Visualize both detection and path planning results with toggleable elements"""
-    vis_img = image.copy()
+    # Only copy the image if we're going to modify it
+    if (show_paths and (obstacles or center_clearance < image.shape[0])) or (show_boxes and (obstacles or line_boxes)):
+        vis_img = image.copy()
+    else:
+        return image  # Return original if no visualization needed
+    
     height, width = image.shape[:2]
     
     # First add path planning visualization if enabled
@@ -318,6 +346,9 @@ def main():
     frame_counter = 0
     output_rate = 5  # Print path data every 5 frames
     
+    # Pre-allocate arrays for better memory management
+    img_rgb = np.zeros((height, width, 3), dtype=np.uint8)
+    
     # Main control loop
     try:
         while robot.step(TIME_STEP) != -1:
@@ -327,12 +358,13 @@ def main():
                 print("No image received from camera")
                 continue
             
-            # Convert Webots image to OpenCV format
+            # Convert Webots image to OpenCV format more efficiently
             img_array = np.frombuffer(img, np.uint8).reshape((height, width, 4))
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_BGRA2BGR)
+            # Use slicing instead of cvtColor for BGRA to BGR conversion (faster)
+            img_rgb = img_array[:, :, :3]
             
             # Perform object detection
-            input_tensor = tf.convert_to_tensor(np.expand_dims(img_array, 0), dtype=tf.float32)
+            input_tensor = tf.convert_to_tensor(np.expand_dims(img_rgb, 0), dtype=tf.float32)
             detections = detect_fn(detection_model, input_tensor)
             
             # Extract obstacles and line boxes from detections
@@ -345,7 +377,7 @@ def main():
             
             # Create combined visualization with current toggle states
             combined_img = visualize_combined(
-                img_array, obstacles, class_names, line_boxes, clear_paths, center_clearance, 
+                img_rgb, obstacles, class_names, line_boxes, clear_paths, center_clearance, 
                 show_paths, show_boxes
             )
             
