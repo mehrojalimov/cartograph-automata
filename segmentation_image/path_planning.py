@@ -75,8 +75,8 @@ def draw_lines(image_path, json_path, output_path):
     return get_clear_paths(width, obstacles)
 
 # Example usage
-json_path = "segmentation_image/seq1_center_20250228-174452.json"
-image_path = "segmentation_image/seq1_center_20250228-174452.png"
+json_path = "segmentation_image/test3.json"
+image_path = "segmentation_image/test3.png"
 output_path = "segmentation_image/output.png"
 
 clear_paths = draw_lines(image_path, json_path, output_path)
