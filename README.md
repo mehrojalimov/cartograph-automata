@@ -63,10 +63,10 @@ Below is a consolidated graph displaying all loss metrics over training steps:
 <div align="center">
   <img src="/ReadmeImages/classification_loss.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/localization_loss.png" alt="D1" width="400px"/>
-  <img src="/ReadmeImages/regularization_loss.png.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/regularization_loss.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/learning_rate.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/total_loss.png" alt="D1" width="400px"/>
-  <img src="/ReadmeImages/complete_graphs.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/complete_graph.png" alt="D1" width="400px"/>
 </div>
 
 ## :mag: Key Features
