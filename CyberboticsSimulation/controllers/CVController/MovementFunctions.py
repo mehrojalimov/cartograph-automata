@@ -14,13 +14,13 @@ import math
 TIME_STEP = 32
 WHEEL_RADIUS = 0.1  # Approximate wheel radius in meters
 ROBOT_WIDTH = 0.2   # Approximate distance between left and right wheels
-DEFAULT_SPEED = 1.5  # Default speed for movement
+DEFAULT_SPEED = 3.5  # Default speed for movement
 
 # Correction factor for angle calculations
 # This is the ratio between desired angle and actual turning angle
 # 90 degrees (1.5708 rad) desired resulted in 0.518768 rad actual
 # So the correction factor is approximately 3.03
-ANGLE_CORRECTION_FACTOR = 3.15  # ≈ 3.03
+ANGLE_CORRECTION_FACTOR = 3.14  # ≈ 3.03
 
 # Global robot and motor references
 robot = None
