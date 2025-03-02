@@ -29,6 +29,8 @@ The system's ability to decide when to deviate from programmed paths and when to
   <img src="/ReadmeImages/seq37_center_20250228-042041.png" alt="D2" width="400px"/>
   <img src="/ReadmeImages/seq34_left_20250228-043507.png" alt="D3" width="400px"/>
   <img src="/ReadmeImages/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
+  <img src="/ReadmeImages/robot.png" alt="D3" width="400px"/>
+  <img src="/ReadmeImages/robot1.png" alt="D4" width="400px"/>
 </div>
 
 ## Obejct Detection
@@ -45,6 +47,30 @@ The system's ability to decide when to deviate from programmed paths and when to
   <img src="/ReadmeImages/ImageSegmentationOutput1.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/ImageSegmentationOutput2.png" alt="D1" width="400px"/>
 
+</div>
+
+# **Training Graphs**
+We visualize various loss metrics during the training process to track model performance and convergence. Below are the key loss functions plotted:
+
+| Loss Type               | Description |
+|-------------------------|-------------|
+| **Classification Loss** | Measures how well the model classifies objects, typically using Cross-Entropy Loss. |
+| **Localization Loss**   | Penalizes incorrect bounding box predictions, often using Smooth L1 or IoU Loss. |
+| **Regularization Loss** | Helps prevent overfitting by adding constraints (e.g., L2 weight decay). |
+| **Total Loss**         | Sum of all losses, representing overall optimization progress. |
+| **Learning Rate**       | Tracks how the learning rate changes over training steps. |
+
+## **Learning - Loss Graph**
+Below is a consolidated graph displaying all loss metrics over training steps:
+<div align="center">
+  <img src="/ReadmeImages/classification_loss.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/localization_loss.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/regularization_loss.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/learning_rate.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/total_loss.png" alt="D1" width="400px"/>
+</div>
+<div align="center">
+  <img src="/ReadmeImages/complete_graph.png" alt="D1" width="600px"/>
 </div>
 
 ## :mag: Key Features
