@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Final Optimized Real-time Object Detection and Path Planning Controller
+Refined Real-time Object Detection and Path Planning Controller
 """
 
 import sys
@@ -55,6 +55,7 @@ def extract_obstacles_from_detections(detections, category_index, height, width)
     """Extract obstacle coordinates from detection results with class names"""
     obstacles = []
     class_names = []
+    line_boxes = []
     
     # Process detection data
     num_detections = int(detections.pop('num_detections'))
@@ -74,24 +75,26 @@ def extract_obstacles_from_detections(detections, category_index, height, width)
             if class_id in category_index:
                 class_name = category_index[class_id]['name']
                 
+                # Convert normalized coordinates to pixel coordinates
+                ymin, xmin, ymax, xmax = boxes[i]
+                xmin_px, ymin_px = int(xmin * width), int(ymin * height)
+                xmax_px, ymax_px = int(xmax * width), int(ymax * height)
+                
+                # Create rectangle vertices
+                bbox = np.array([
+                    [xmin_px, ymin_px], 
+                    [xmax_px, ymin_px], 
+                    [xmax_px, ymax_px], 
+                    [xmin_px, ymax_px]
+                ], dtype=int)
+                
                 if class_name in CLASSES_TO_AVOID:
-                    # Convert normalized coordinates to pixel coordinates
-                    ymin, xmin, ymax, xmax = boxes[i]
-                    xmin_px, ymin_px = int(xmin * width), int(ymin * height)
-                    xmax_px, ymax_px = int(xmax * width), int(ymax * height)
-                    
-                    # Create rectangle vertices
-                    bbox = np.array([
-                        [xmin_px, ymin_px], 
-                        [xmax_px, ymin_px], 
-                        [xmax_px, ymax_px], 
-                        [xmin_px, ymax_px]
-                    ], dtype=int)
-                    
                     obstacles.append(bbox)
                     class_names.append(class_name)
+                elif class_name == 'line':
+                    line_boxes.append(bbox)
     
-    return obstacles, class_names, detections
+    return obstacles, class_names, line_boxes, detections
 
 def is_line_blocked(x, obstacles):
     """Check if a vertical line at x intersects any obstacle."""
@@ -187,8 +190,8 @@ def draw_path_lines(image, blocked_segments, height, alpha=0.5):
     
     return result
 
-def draw_custom_boxes(image, obstacles, class_names):
-    """Draw red bounding boxes for obstacles with proper class names at bottom"""
+def draw_clean_labels(image, obstacles, class_names):
+    """Draw red bounding boxes for obstacles with clean labels at bottom"""
     for i, bbox in enumerate(obstacles):
         # Get corner points
         x_min, y_min = bbox.min(axis=0)
@@ -203,26 +206,87 @@ def draw_custom_boxes(image, obstacles, class_names):
         class_name = class_name.capitalize()
         
         # Calculate text size to better position the label
-        (text_width, text_height), _ = cv2.getTextSize(
-            class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+        font_scale = 0.5
+        font_thickness = 1
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        (text_width, text_height), baseline = cv2.getTextSize(
+            class_name, font, font_scale, font_thickness)
         
         # Position the text at the bottom of the box, centered horizontally
         text_x = x_min + (x_max - x_min - text_width) // 2
         text_y = y_max + text_height + 5  # 5 pixels below the box
         
-        # Draw black background for better visibility
-        cv2.rectangle(image, 
-                     (text_x - 2, text_y - text_height - 2),
-                     (text_x + text_width + 2, text_y + 2),
-                     (0, 0, 0), -1)
+        # Draw a semi-transparent background for the label
+        label_bg = np.zeros_like(image)
+        cv2.rectangle(label_bg,
+                     (text_x - 5, text_y - text_height - 5),
+                     (text_x + text_width + 5, text_y + 5),
+                     (40, 40, 40), -1)  # Dark gray background
+        
+        # Blend the background with the image
+        alpha = 0.7
+        roi = image[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5]
+        bg_roi = label_bg[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5]
+        
+        # Check if ROI is valid (not out of bounds)
+        if roi.shape[0] > 0 and roi.shape[1] > 0 and roi.shape == bg_roi.shape:
+            blended_roi = cv2.addWeighted(roi, 1 - alpha, bg_roi, alpha, 0)
+            image[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5] = blended_roi
         
         # Draw the text
         cv2.putText(image, class_name, (text_x, text_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                   font, font_scale, (255, 255, 255), font_thickness)  # White text
     
     return image
 
-def visualize_combined(image, obstacles, class_names, clear_paths, center_clearance, show_paths=True, show_boxes=True):
+def draw_line_boxes(image, line_boxes):
+    """Draw yellow bounding boxes around lines"""
+    for bbox in line_boxes:
+        # Get corner points
+        x_min, y_min = bbox.min(axis=0)
+        x_max, y_max = bbox.max(axis=0)
+        
+        # Draw yellow rectangle
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 255), 2)  # Yellow box
+        
+        # Add "Line" label
+        label = "Line"
+        
+        # Calculate text size for positioning
+        font_scale = 0.5
+        font_thickness = 1
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        (text_width, text_height), baseline = cv2.getTextSize(
+            label, font, font_scale, font_thickness)
+        
+        # Position the text at the bottom of the box
+        text_x = x_min + (x_max - x_min - text_width) // 2
+        text_y = y_max + text_height + 5
+        
+        # Draw semi-transparent background
+        label_bg = np.zeros_like(image)
+        cv2.rectangle(label_bg,
+                    (text_x - 5, text_y - text_height - 5),
+                    (text_x + text_width + 5, text_y + 5),
+                    (40, 40, 40), -1)
+        
+        # Blend the background with the image
+        alpha = 0.7
+        roi = image[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5]
+        bg_roi = label_bg[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5]
+        
+        # Check if ROI is valid (not out of bounds)
+        if roi.shape[0] > 0 and roi.shape[1] > 0 and roi.shape == bg_roi.shape:
+            blended_roi = cv2.addWeighted(roi, 1 - alpha, bg_roi, alpha, 0)
+            image[text_y - text_height - 5:text_y + 5, text_x - 5:text_x + text_width + 5] = blended_roi
+        
+        # Draw the text
+        cv2.putText(image, label, (text_x, text_y), 
+                   font, font_scale, (0, 255, 255), font_thickness)  # Yellow text
+    
+    return image
+
+def visualize_combined(image, obstacles, class_names, line_boxes, clear_paths, center_clearance, show_paths=True, show_boxes=True):
     """Visualize both detection and path planning results with toggleable elements"""
     vis_img = image.copy()
     height, width = image.shape[:2]
@@ -242,9 +306,12 @@ def visualize_combined(image, obstacles, class_names, clear_paths, center_cleara
             label_pos = (center_x + 5, height - center_clearance//2)
             cv2.putText(vis_img, f"{center_clearance}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
     
-    # Then draw custom red bounding boxes if enabled
+    # Draw yellow boxes around lines and labels
     if show_boxes:
-        vis_img = draw_custom_boxes(vis_img, obstacles, class_names)
+        vis_img = draw_line_boxes(vis_img, line_boxes)
+        
+        # Then draw red bounding boxes for obstacles
+        vis_img = draw_clean_labels(vis_img, obstacles, class_names)
     
     return vis_img
 
@@ -304,8 +371,8 @@ def main():
             input_tensor = tf.convert_to_tensor(np.expand_dims(img_array, 0), dtype=tf.float32)
             detections = detect_fn(detection_model, input_tensor)
             
-            # Extract obstacles from detections with class names
-            obstacles, class_names, processed_detections = extract_obstacles_from_detections(
+            # Extract obstacles and line boxes from detections
+            obstacles, class_names, line_boxes, processed_detections = extract_obstacles_from_detections(
                 detections, category_index, height, width)
             
             # Calculate path planning
@@ -314,7 +381,7 @@ def main():
             
             # Create combined visualization with current toggle states
             combined_img = visualize_combined(
-                img_array, obstacles, class_names, clear_paths, center_clearance, 
+                img_array, obstacles, class_names, line_boxes, clear_paths, center_clearance, 
                 show_paths, show_boxes
             )
             
