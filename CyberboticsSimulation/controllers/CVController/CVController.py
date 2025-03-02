@@ -32,9 +32,9 @@ CLASSES_TO_AVOID = ['person', 'shelf']  # Classes to treat as obstacles
 PATH_STEP_SIZE = 10  # Step size for path finding algorithm
 
 # Movement configuration
-LONG_DISTANCE = 30.2  # Updated from 32
-SHORT_DISTANCE = 20  # Updated from 23.5
-TURN_ANGLE = 90       # This remains the same
+LONG_DISTANCE = 23  # Updated from 32
+SHORT_DISTANCE = LONG_DISTANCE * 0.72142857142857142857142857142857  # Updated from 23.5
+TURN_ANGLE = 65    # This remains the same
 MOVEMENT_SPEED = 5 # Default speed * 3 as in MovementFunctions
 
 # Enhanced safety configuration - more sensitive to obstacles
@@ -152,12 +152,12 @@ def is_line_blocked(x, obstacles):
             return True
     return False
 
-def is_obstacle_in_line_area(obstacles, line_boxes):
-    """Check if any obstacle is directly above a line bounding box."""
+def is_obstacle_in_line_area(obstacles, line_boxes, class_names):
+    """Check if any person is directly above a line bounding box."""
     if not obstacles or not line_boxes:
         return False
     
-    # For each line box, check if any obstacle is directly above it
+    # For each line box, check if any person is directly above it
     for line_bbox in line_boxes:
         line_x_min, line_y_min = line_bbox.min(axis=0)
         line_x_max, line_y_max = line_bbox.max(axis=0)
@@ -168,7 +168,11 @@ def is_obstacle_in_line_area(obstacles, line_boxes):
         above_y_min = 0  # Top of the image
         above_y_max = line_y_min  # Just above the line's top edge
         
-        for obs_bbox in obstacles:
+        for i, obs_bbox in enumerate(obstacles):
+            # Only check for persons
+            if i < len(class_names) and class_names[i].lower() != 'person':
+                continue
+                
             obs_x_min, obs_y_min = obs_bbox.min(axis=0)
             obs_x_max, obs_y_max = obs_bbox.max(axis=0)
             
@@ -256,7 +260,7 @@ def get_central_clearance(height, width, obstacles):
     # Return the distance from the bottom to the obstacle
     return height - min_y_max if min_y_max != height else height
 
-def check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width):
+def check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width, class_names):
     """
     Determine if the current path is safe for the robot to proceed.
     
@@ -271,8 +275,8 @@ def check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, heig
     Returns:
         Boolean indicating if path is safe
     """
-    # First, check if any obstacle is directly above a line
-    if is_obstacle_in_line_area(obstacles, line_boxes):
+    # First, check if any person is directly above a line
+    if is_obstacle_in_line_area(obstacles, line_boxes, class_names):
         return False
     
     # Check if there are no clear paths wide enough
@@ -506,7 +510,7 @@ def detection_thread(detection_model, category_index, camera, width, height):
         
         # Determine if the path is safe - check for obstacles in line path first
         # In detection_thread:
-        is_safe = check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width)
+        is_safe = check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width, class_names)
         
         # Update the global safety flags
         with safety_lock:
@@ -550,7 +554,7 @@ def detection_thread(detection_model, category_index, camera, width, height):
     print("Detection thread exiting...")
     cv2.destroyAllWindows()
 
-def partial_move_forward(distance, step_size=0.5, speed=MOVEMENT_SPEED):
+def partial_move_forward(distance, step_size=1, speed=MOVEMENT_SPEED):
     """
     Move forward in small increments to allow for emergency stops.
     
@@ -648,13 +652,7 @@ def partial_turn_right(angle, step_size=10, speed=MOVEMENT_SPEED/3):
 def execute_movement(action, value):
     """
     Execute a single movement with support for emergency stop and resume.
-    
-    Args:
-        action: Type of movement ("forward" or "turn_right")
-        value: Distance or angle value
-        
-    Returns:
-        Tuple of (completed, remaining) indicating progress
+    Only check for obstacles during forward movement, not during turns.
     """
     global emergency_stop, current_action, current_value, movement_in_progress
     
@@ -664,27 +662,36 @@ def execute_movement(action, value):
         movement_in_progress = True
     
     if action == "forward":
+        # For forward movement, use partial movement with obstacle checking
         completed = partial_move_forward(value)
         remaining = value - completed
     elif action == "turn_right":
-        completed = partial_turn_right(value)
-        remaining = value - completed
+        # For turning, ignore obstacles and complete the full movement
+        # This bypasses the emergency stop checking for turns
+        try:
+            turn_right(value)
+            completed = value
+            remaining = 0
+        except Exception as e:
+            print(f"Error during turn: {e}")
+            completed = 0
+            remaining = value
     else:
         print(f"Unknown movement action: {action}")
         completed = 0
         remaining = value
     
-    # Check if movement was interrupted by emergency stop
+    # Check if movement was interrupted by emergency stop (only relevant for forward)
     with safety_lock:
         was_emergency = emergency_stop
     
-    if was_emergency:
-        # If emergency stop occurred, we'll need to resume later
+    if was_emergency and action == "forward":
+        # If emergency stop occurred during forward movement
         with movement_state_lock:
             movement_in_progress = False
         return completed, remaining
     else:
-        # Completed successfully
+        # Completed successfully or it was a turn
         with movement_state_lock:
             movement_in_progress = False
         return value, 0

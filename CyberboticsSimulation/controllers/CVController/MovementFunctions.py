@@ -20,7 +20,7 @@ DEFAULT_SPEED = 5  # Default speed for movement
 # This is the ratio between desired angle and actual turning angle
 # 90 degrees (1.5708 rad) desired resulted in 0.518768 rad actual
 # So the correction factor is approximately 3.03
-ANGLE_CORRECTION_FACTOR = 3.17  # ≈ 3.03
+ANGLE_CORRECTION_FACTOR = 3.15  # ≈ 3.03
 
 # Global robot and motor references
 robot = None
