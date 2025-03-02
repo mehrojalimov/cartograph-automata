@@ -32,10 +32,10 @@ CLASSES_TO_AVOID = ['person', 'shelf']  # Classes to treat as obstacles
 PATH_STEP_SIZE = 10  # Step size for path finding algorithm
 
 # Movement configuration
-LONG_DISTANCE = 32
-SHORT_DISTANCE = 23.5
-TURN_ANGLE = 90
-MOVEMENT_SPEED = 1.5 * 3  # Default speed * 3 as in MovementFunctions
+LONG_DISTANCE = 30.2  # Updated from 32
+SHORT_DISTANCE = 20  # Updated from 23.5
+TURN_ANGLE = 90       # This remains the same
+MOVEMENT_SPEED = 5 # Default speed * 3 as in MovementFunctions
 
 # Enhanced safety configuration - more sensitive to obstacles
 OBSTACLE_CLEARANCE_THRESHOLD = 100  # Increased from 50 to be more sensitive
@@ -581,12 +581,13 @@ def partial_move_forward(distance, step_size=0.5, speed=MOVEMENT_SPEED):
         
         # Move a small distance
         try:
+            # For debugging
+            print(f"Moving step {i+1}/{steps}: {step_distance:.2f} units")
             move_forward(step_distance, speed)
+            completed_distance += step_distance
         except Exception as e:
             print(f"Error during forward movement: {e}")
             return completed_distance
-        
-        completed_distance += step_distance
         
         # Short delay to check for obstacles
         time.sleep(0.05)
@@ -595,7 +596,7 @@ def partial_move_forward(distance, step_size=0.5, speed=MOVEMENT_SPEED):
     with movement_state_lock:
         movement_progress = 1.0
     
-    return distance
+    return completed_distance
 
 def partial_turn_right(angle, step_size=10, speed=MOVEMENT_SPEED/3):
     """
