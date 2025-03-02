@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Integrated Real-time Object Detection and Path Planning Controller
+with Toggle Controls for Visualization
 """
 
 import sys
@@ -123,7 +124,7 @@ def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     return clear_x
 
 def get_central_clearance(height, width, obstacles):
-    """Find vertical clearance from the bottom to the bottom part of the first obstacle in the center."""
+    """Find vertical clearance from the bottom to the first obstacle in the center."""
     center_x = width // 2
     min_y_max = height  # Default to full height (no obstacle case)
 
@@ -136,51 +137,62 @@ def get_central_clearance(height, width, obstacles):
     # Return the distance from the bottom to the obstacle
     return height - min_y_max if min_y_max != height else height
 
-def visualize_combined(image, obstacles, clear_paths, center_clearance, detections, category_index):
-    """Visualize both detection and path planning results on a single image"""
-    # First draw detection boxes and labels
-    vis_img = image.copy()
-    viz_utils.visualize_boxes_and_labels_on_image_array(
-        vis_img,
-        detections['detection_boxes'],
-        detections['detection_classes'] + 1,  # Label offset
-        detections['detection_scores'],
-        category_index,
-        use_normalized_coordinates=True,
-        max_boxes_to_draw=10,
-        min_score_thresh=DETECTION_THRESHOLD,
-        agnostic_mode=False
-    )
+def create_blocked_path_mask(width, height, obstacles, step=PATH_STEP_SIZE):
+    """Create a binary mask of blocked paths"""
+    blocked_mask = np.zeros((height, width), dtype=np.uint8)
     
-    # Now add path planning visualization
-    height, width = image.shape[:2]
-    half_width = width // 2
+    for x in range(0, width, step):
+        if is_line_blocked(x, obstacles):
+            # Draw a vertical line if this column is blocked
+            cv2.line(blocked_mask, (x, 0), (x, height), 255, step)
     
-    # Draw clear paths as vertical lines
-    for x in range(0, width, PATH_STEP_SIZE):
-        if not is_line_blocked(x, obstacles):
-            cv2.line(vis_img, (x, 0), (x, height), (255, 0, 255), 1)  # Purple lines
-    
-    # Highlight the clear paths with thicker lines at boundaries
-    for left, right in clear_paths:
-        # Convert back from centered coordinates
-        x_left = left + half_width
-        x_right = right + half_width
-        
-        # Draw boundary lines in green
-        cv2.line(vis_img, (x_left, 0), (x_left, height), (0, 255, 0), 2)
-        cv2.line(vis_img, (x_right, 0), (x_right, height), (0, 255, 0), 2)
-        
-        # Draw path width label
-        path_width = x_right - x_left
-        label_pos = (x_left + path_width//2, height - 30)
-        cv2.putText(vis_img, f"{path_width}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    return blocked_mask
 
-    # Draw center clearance
-    center_x = width // 2
-    cv2.line(vis_img, (center_x, height), (center_x, height - center_clearance), (0, 255, 255), 2)
-    label_pos = (center_x + 5, height - center_clearance//2)
-    cv2.putText(vis_img, f"{center_clearance}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+def visualize_combined(image, obstacles, clear_paths, center_clearance, detections, category_index, show_paths=True, show_boxes=True):
+    """Visualize both detection and path planning results on a single image with toggleable elements"""
+    vis_img = image.copy()
+    height, width = image.shape[:2]
+    
+    # Draw detection boxes and labels if enabled
+    if show_boxes:
+        viz_utils.visualize_boxes_and_labels_on_image_array(
+            vis_img,
+            detections['detection_boxes'],
+            detections['detection_classes'] + 1,  # Label offset
+            detections['detection_scores'],
+            category_index,
+            use_normalized_coordinates=True,
+            max_boxes_to_draw=10,
+            min_score_thresh=DETECTION_THRESHOLD,
+            agnostic_mode=False
+        )
+    
+    # Add path planning visualization if enabled
+    if show_paths:
+        # Create a mask for blocked paths
+        blocked_mask = create_blocked_path_mask(width, height, obstacles)
+        
+        # Apply red color to blocked paths
+        red_overlay = np.zeros_like(vis_img)
+        red_overlay[blocked_mask > 0] = [0, 0, 255]  # BGR format - Red
+        
+        # Blend the overlay with the original image (50% transparency)
+        alpha = 0.5
+        vis_img = cv2.addWeighted(vis_img, 1.0, red_overlay, alpha, 0)
+        
+        # Add borders to blocked areas
+        for x in range(0, width, PATH_STEP_SIZE):
+            if is_line_blocked(x, obstacles):
+                # Draw red border lines
+                cv2.line(vis_img, (x, 0), (x, height), (0, 0, 255), 2)
+                cv2.line(vis_img, (x + PATH_STEP_SIZE - 1, 0), (x + PATH_STEP_SIZE - 1, height), (0, 0, 255), 2)
+        
+        # Draw center clearance indicator
+        center_x = width // 2
+        if center_clearance < height:  # Only draw if there's an obstacle
+            cv2.line(vis_img, (center_x, height), (center_x, height - center_clearance), (0, 255, 255), 2)
+            label_pos = (center_x + 5, height - center_clearance//2)
+            cv2.putText(vis_img, f"{center_clearance}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
     
     return vis_img
 
@@ -209,7 +221,15 @@ def main():
     cv2.resizeWindow("Object Detection & Path Planning", 800, 600)
     cv2.setWindowProperty("Object Detection & Path Planning", cv2.WND_PROP_TOPMOST, 1)
     
-    print("Starting object detection and path planning. Press 'q' to exit.")
+    print("Starting object detection and path planning.")
+    print("Controls:")
+    print("  Press 'e' to toggle path visualization")
+    print("  Press 'r' to toggle bounding box visualization")
+    print("  Press 'q' to exit")
+    
+    # Visualization toggle flags
+    show_paths = True
+    show_boxes = True
     
     # Frame counter for rate limiting outputs
     frame_counter = 0
@@ -239,10 +259,10 @@ def main():
             clear_paths = get_clear_paths(width, obstacles)
             center_clearance = get_central_clearance(height, width, obstacles)
             
-            # Create combined visualization
+            # Create combined visualization with current toggle states
             combined_img = visualize_combined(
                 img_array, obstacles, clear_paths, center_clearance, 
-                processed_detections, category_index
+                processed_detections, category_index, show_paths, show_boxes
             )
             
             # Print out the available paths (limiting frequency to avoid console spam)
@@ -259,11 +279,17 @@ def main():
             # Display the combined image
             cv2.imshow("Object Detection & Path Planning", combined_img)
             
-            # Check for keyboard input to exit
+            # Check for keyboard input
             key = cv2.waitKey(1)
             if key == ord('q'):
                 print("User requested exit")
                 break
+            elif key == ord('e'):
+                show_paths = not show_paths
+                print(f"Path visualization: {'ON' if show_paths else 'OFF'}")
+            elif key == ord('r'):
+                show_boxes = not show_boxes
+                print(f"Bounding box visualization: {'ON' if show_boxes else 'OFF'}")
     
     except Exception as e:
         print(f"\nError occurred: {e}")
