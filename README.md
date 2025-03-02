@@ -47,7 +47,7 @@ The system's ability to decide when to deviate from programmed paths and when to
 
 </div>
 
-# **Training Loss Graphs**
+# **Training Graphs**
 We visualize various loss metrics during the training process to track model performance and convergence. Below are the key loss functions plotted:
 
 | Loss Type               | Description |
@@ -58,7 +58,7 @@ We visualize various loss metrics during the training process to track model per
 | **Total Loss**         | Sum of all losses, representing overall optimization progress. |
 | **Learning Rate**       | Tracks how the learning rate changes over training steps. |
 
-## **Loss Graph**
+## **Learning - Loss Graph**
 Below is a consolidated graph displaying all loss metrics over training steps:
 <div align="center">
   <img src="/ReadmeImages/classification_loss.png" alt="D1" width="400px"/>
@@ -66,7 +66,9 @@ Below is a consolidated graph displaying all loss metrics over training steps:
   <img src="/ReadmeImages/regularization_loss.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/learning_rate.png" alt="D1" width="400px"/>
   <img src="/ReadmeImages/total_loss.png" alt="D1" width="400px"/>
-  <img src="/ReadmeImages/complete_graph.png" alt="D1" width="400px"/>
+</div>
+<div align="center">
+  <img src="/ReadmeImages/complete_graph.png" alt="D1" width="600px"/>
 </div>
 
 ## :mag: Key Features
