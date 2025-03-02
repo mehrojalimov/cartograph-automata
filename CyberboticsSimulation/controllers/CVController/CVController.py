@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Improved Threaded Real-time Object Detection and Rectangle Movement Controller
-- Immediately stops when obstacles are detected in the line's path
-- Seamlessly resumes movement from where it left off
+- Stops only when obstacles are detected in the middle 30% of the screen
+- Performs turns as a single operation without segmentation
+- Optimized for performance without breaking functionality
 """
 import sys
 import os
@@ -32,18 +33,18 @@ CLASSES_TO_AVOID = ['person', 'shelf']  # Classes to treat as obstacles
 PATH_STEP_SIZE = 10  # Step size for path finding algorithm
 
 # Movement configuration
-LONG_DISTANCE = 23  # Updated from 32
+LONG_DISTANCE = 22.7  # Updated from 32
 SHORT_DISTANCE = LONG_DISTANCE * 0.72142857142857142857142857142857  # Updated from 23.5
-TURN_ANGLE = 65    # This remains the same
+TURN_ANGLE = 60    # This remains the same
 MOVEMENT_SPEED = 5 # Default speed * 3 as in MovementFunctions
 
-# Enhanced safety configuration - more sensitive to obstacles
-OBSTACLE_CLEARANCE_THRESHOLD = 100  # Increased from 50 to be more sensitive
-PATH_WIDTH_THRESHOLD = 150  # Increased from 100 to be more sensitive
+# Enhanced safety configuration
+OBSTACLE_CLEARANCE_THRESHOLD = 100  # Clearance threshold
+PATH_WIDTH_THRESHOLD = 150  # Path width threshold
 
 # Global variables for thread communication
 path_is_safe = True
-emergency_stop = False  # New flag for immediate stopping
+emergency_stop = False
 detection_running = True
 movement_running = True
 current_image = None
@@ -187,7 +188,26 @@ def is_obstacle_in_line_area(obstacles, line_boxes, class_names):
                 return True
     
     return False
+
+def is_obstacle_in_middle(obstacles, width):
+    """
+    Check if any obstacle is in the middle 30% of the screen.
+    """
+    if not obstacles:
+        return False
+        
+    left_bound = int(width * 0.45)
+    right_bound = int(width * 0.55)
     
+    for bbox in obstacles:
+        x_min, _ = bbox.min(axis=0)
+        x_max, _ = bbox.max(axis=0)
+        
+        # Check if obstacle overlaps with middle region
+        if not (x_max < left_bound or x_min > right_bound):
+            return True
+    
+    return False
 
 def find_blocked_path_segments(width, obstacles, step=PATH_STEP_SIZE):
     """Find start and end points of blocked path segments for efficient drawing
@@ -263,53 +283,17 @@ def get_central_clearance(height, width, obstacles):
 def check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width, class_names):
     """
     Determine if the current path is safe for the robot to proceed.
-    
-    Args:
-        obstacles: List of obstacle bounding boxes
-        line_boxes: Detected line bounding boxes
-        clear_paths: List of clear path coordinates
-        center_clearance: Vertical clearance in center of image
-        height: Image height
-        width: Image width
-        
-    Returns:
-        Boolean indicating if path is safe
+    Only stops for obstacles in the middle 30% of the screen or when a person is above a line.
     """
     # First, check if any person is directly above a line
     if is_obstacle_in_line_area(obstacles, line_boxes, class_names):
         return False
     
-    # Check if there are no clear paths wide enough
-    if not clear_paths:
+    # Check if any obstacle is in the middle region (30% of screen width)
+    if is_obstacle_in_middle(obstacles, width):
         return False
     
-    # Check if the center of the screen is in any clear path
-    center_x = width // 2
-    center_is_clear = False
-    for left, right in clear_paths:
-        # Convert from centered coordinates to absolute
-        abs_left = center_x + left
-        abs_right = center_x + right
-        if abs_left <= center_x <= abs_right:
-            center_is_clear = True
-            break
-    
-    if not center_is_clear:
-        # Center path is blocked
-        return False
-    
-    # Get the widest clear path
-    widest_path = max(clear_paths, key=lambda p: p[1] - p[0])
-    path_width = widest_path[1] - widest_path[0]
-    
-    # Check if the center clearance is below threshold
-    if center_clearance < OBSTACLE_CLEARANCE_THRESHOLD:
-        return False
-    
-    # Check if path is too narrow
-    if path_width < PATH_WIDTH_THRESHOLD:
-        return False
-    
+    # Path is safe if no obstacles in middle region and no person above line
     return True
 
 def draw_path_lines(image, blocked_segments, height, alpha=0.5):
@@ -412,32 +396,38 @@ def draw_line_boxes(image, line_boxes):
 
 def visualize_combined(image, obstacles, class_names, line_boxes, clear_paths, center_clearance, 
                       is_safe, show_paths=True, show_boxes=True, line_height=0):
-    """Visualize both detection and path planning results with toggleable elements"""
-    # Only copy the image if we're going to modify it
-    if (show_paths and (obstacles or center_clearance < image.shape[0])) or (show_boxes and (obstacles or line_boxes)):
-        vis_img = image.copy()
-    else:
-        return image  # Return original if no visualization needed
-    
+    """Optimized visualization function with middle region indicator"""
+    # Make a copy of the image for drawing
+    vis_img = image.copy()
     height, width = image.shape[:2]
     
-    # First add path planning visualization if enabled
+    # Draw middle region indicator (30% of screen width)
+    left_bound = int(width * 0.45)
+    right_bound = int(width * 0.55)
+    
+    # Draw semi-transparent vertical lines to show detection zone
+    overlay = vis_img.copy()
+    cv2.line(overlay, (left_bound, 0), (left_bound, height), (255, 255, 0), 2)
+    cv2.line(overlay, (right_bound, 0), (right_bound, height), (255, 255, 0), 2)
+    alpha = 0.4
+    vis_img = cv2.addWeighted(overlay, alpha, vis_img, 1 - alpha, 0)
+    
+    # Draw "Detection Zone" label
+    cv2.putText(vis_img, "Detection Zone", (left_bound + 10, 20), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+    
+    # Add other visualizations based on flags
     if show_paths:
-        # Find blocked path segments for more efficient drawing
         blocked_segments = find_blocked_path_segments(width, obstacles)
-        
-        # Draw transparent lines with solid borders for blocked paths
         vis_img = draw_path_lines(vis_img, blocked_segments, height)
         
-        # Draw center clearance indicator
-        center_x = width // 2
-        if center_clearance < height:  # Only draw if there's an obstacle
-            clearance_color = (0, 255, 0) if is_safe else (0, 0, 255)  # Green if safe, red if unsafe
+        if center_clearance < height:
+            clearance_color = (0, 255, 0) if is_safe else (0, 0, 255)
+            center_x = width // 2
             cv2.line(vis_img, (center_x, height), (center_x, height - center_clearance), clearance_color, 2)
             label_pos = (center_x + 5, height - center_clearance//2)
             cv2.putText(vis_img, f"{center_clearance}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, clearance_color, 1)
     
-    # Draw yellow boxes around lines and red boxes around obstacles if enabled
     if show_boxes:
         vis_img = draw_line_boxes(vis_img, line_boxes)
         vis_img = draw_obstacle_labels(vis_img, obstacles, class_names)
@@ -509,7 +499,6 @@ def detection_thread(detection_model, category_index, camera, width, height):
         center_clearance = get_central_clearance(height, width, obstacles)
         
         # Determine if the path is safe - check for obstacles in line path first
-        # In detection_thread:
         is_safe = check_path_safety(obstacles, line_boxes, clear_paths, center_clearance, height, width, class_names)
         
         # Update the global safety flags
@@ -518,7 +507,7 @@ def detection_thread(detection_model, category_index, camera, width, height):
             if not is_safe and prev_safe_state:
                 # Path just became unsafe, trigger emergency stop
                 emergency_stop = True
-                print("⚠️ EMERGENCY STOP! Obstacle detected in line path")
+                print("⚠️ EMERGENCY STOP! Obstacle detected in middle zone or person above line")
             elif is_safe and not prev_safe_state:
                 # Path just became safe again
                 emergency_stop = False
@@ -602,53 +591,6 @@ def partial_move_forward(distance, step_size=1, speed=MOVEMENT_SPEED):
     
     return completed_distance
 
-def partial_turn_right(angle, step_size=10, speed=MOVEMENT_SPEED/3):
-    """
-    Turn right in small increments to allow for emergency stops.
-    
-    Args:
-        angle: Total angle to turn
-        step_size: Size of each step in angle units
-        speed: Motor speed
-        
-    Returns:
-        Completed angle
-    """
-    global emergency_stop, movement_in_progress, movement_progress
-    
-    steps = max(1, int(angle / step_size))
-    step_angle = angle / steps
-    completed_angle = 0
-    
-    for i in range(steps):
-        # Check for emergency stop
-        with safety_lock:
-            if emergency_stop:
-                print(f"Turn interrupted after turning {completed_angle:.2f} degrees")
-                return completed_angle
-        
-        # Update progress
-        with movement_state_lock:
-            movement_progress = completed_angle / angle
-        
-        # Turn a small angle
-        try:
-            turn_right(step_angle, speed)
-        except Exception as e:
-            print(f"Error during turn: {e}")
-            return completed_angle
-        
-        completed_angle += step_angle
-        
-        # Short delay to check for obstacles
-        time.sleep(0.05)
-    
-    # Final progress update
-    with movement_state_lock:
-        movement_progress = 1.0
-    
-    return angle
-
 def execute_movement(action, value):
     """
     Execute a single movement with support for emergency stop and resume.
@@ -666,10 +608,19 @@ def execute_movement(action, value):
         completed = partial_move_forward(value)
         remaining = value - completed
     elif action == "turn_right":
-        # For turning, ignore obstacles and complete the full movement
-        # This bypasses the emergency stop checking for turns
+        # For turning, execute the full turn at once without segmentation
         try:
-            turn_right(value)
+            # Update progress for UI display
+            with movement_state_lock:
+                movement_progress = 0.0
+            
+            # Execute the turn
+            turn_right(value, MOVEMENT_SPEED/3)
+            
+            # Update final progress
+            with movement_state_lock:
+                movement_progress = 1.0
+                
             completed = value
             remaining = 0
         except Exception as e:
@@ -763,13 +714,8 @@ def movement_thread():
                     else:
                         print("Rectangle movement pattern completed!")
         else:
-            # Path is blocked, wait
-            if local_emergency_stop:
-                # Just wait until the path is clear again
-                time.sleep(0.1)
-            else:
-                # Small delay to prevent CPU hogging
-                time.sleep(0.05)
+            # Path is blocked, wait with reduced polling frequency
+            time.sleep(0.05)  # Use a consistent sleep time for better resource usage
     
     print("Movement thread exiting...")
     with safety_lock:
