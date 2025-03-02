@@ -29,6 +29,8 @@ The system's ability to decide when to deviate from programmed paths and when to
   <img src="/ReadmeImages/seq37_center_20250228-042041.png" alt="D2" width="400px"/>
   <img src="/ReadmeImages/seq34_left_20250228-043507.png" alt="D3" width="400px"/>
   <img src="/ReadmeImages/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
+  <img src="/ReadmeImages/robot.png" alt="D3" width="400px"/>
+  <img src="/ReadmeImages/robot1.png" alt="D4" width="400px"/>
 </div>
 
 ## Obejct Detection
