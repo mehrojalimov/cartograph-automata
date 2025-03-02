@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Integrated Real-time Object Detection and Path Planning Controller
-with Toggle Controls for Visualization
+Optimized Real-time Object Detection and Path Planning Controller
 """
 
 import sys
@@ -101,6 +100,16 @@ def is_line_blocked(x, obstacles):
             return True
     return False
 
+def get_blocked_columns(width, obstacles, step=PATH_STEP_SIZE):
+    """Get a list of blocked x-coordinates for efficient drawing"""
+    blocked_columns = []
+    
+    for x in range(0, width, step):
+        if is_line_blocked(x, obstacles):
+            blocked_columns.append(x)
+            
+    return blocked_columns
+
 def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     """Identify leftmost and rightmost x-coordinates of clear paths, centered at 0."""
     half_width = width // 2
@@ -108,12 +117,15 @@ def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     in_clear_area = False
     left_boundary = None
 
+    # Reuse blocked columns calculation
+    blocked_columns = set([x for x in range(0, width, step) if is_line_blocked(x, obstacles)])
+    
     for x in range(0, width, step):
-        if not is_line_blocked(x, obstacles):
+        if x not in blocked_columns:  # Clear path
             if not in_clear_area:
                 left_boundary = x - half_width  # Convert to centered coordinates
                 in_clear_area = True
-        else:
+        else:  # Blocked path
             if in_clear_area:
                 clear_x.append((left_boundary, (x - step) - half_width))  # Convert to centered coordinates
                 in_clear_area = False
@@ -137,55 +149,46 @@ def get_central_clearance(height, width, obstacles):
     # Return the distance from the bottom to the obstacle
     return height - min_y_max if min_y_max != height else height
 
-def create_blocked_path_mask(width, height, obstacles, step=PATH_STEP_SIZE):
-    """Create a binary mask of blocked paths"""
-    blocked_mask = np.zeros((height, width), dtype=np.uint8)
+def draw_transparent_lines(image, blocked_columns, height, alpha=0.6):
+    """Draw semi-transparent lines for blocked paths"""
+    # Create a separate image for the lines
+    line_img = np.zeros_like(image)
     
-    for x in range(0, width, step):
-        if is_line_blocked(x, obstacles):
-            # Draw a vertical line if this column is blocked
-            cv2.line(blocked_mask, (x, 0), (x, height), 255, step)
+    # Draw red lines on blocked columns
+    for x in blocked_columns:
+        cv2.line(line_img, (x, 0), (x, height), (0, 0, 255), 2)  # Red lines
     
-    return blocked_mask
+    # Blend with original image
+    return cv2.addWeighted(image, 1.0, line_img, alpha, 0)
 
-def visualize_combined(image, obstacles, clear_paths, center_clearance, detections, category_index, show_paths=True, show_boxes=True):
-    """Visualize both detection and path planning results on a single image with toggleable elements"""
+def draw_custom_boxes(image, obstacles):
+    """Draw red bounding boxes for obstacles"""
+    for bbox in obstacles:
+        # Get corner points
+        x_min, y_min = bbox.min(axis=0)
+        x_max, y_max = bbox.max(axis=0)
+        
+        # Draw red rectangle
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
+        
+        # Add class label
+        cv2.putText(image, "Obstacle", (x_min, y_min - 5), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+    
+    return image
+
+def visualize_combined(image, obstacles, clear_paths, center_clearance, show_paths=True, show_boxes=True):
+    """Visualize both detection and path planning results with toggleable elements"""
     vis_img = image.copy()
     height, width = image.shape[:2]
     
-    # Draw detection boxes and labels if enabled
-    if show_boxes:
-        viz_utils.visualize_boxes_and_labels_on_image_array(
-            vis_img,
-            detections['detection_boxes'],
-            detections['detection_classes'] + 1,  # Label offset
-            detections['detection_scores'],
-            category_index,
-            use_normalized_coordinates=True,
-            max_boxes_to_draw=10,
-            min_score_thresh=DETECTION_THRESHOLD,
-            agnostic_mode=False
-        )
+    # Calculate blocked columns once for efficiency
+    blocked_columns = get_blocked_columns(width, obstacles) if show_paths else []
     
-    # Add path planning visualization if enabled
+    # First add path planning visualization if enabled
     if show_paths:
-        # Create a mask for blocked paths
-        blocked_mask = create_blocked_path_mask(width, height, obstacles)
-        
-        # Apply red color to blocked paths
-        red_overlay = np.zeros_like(vis_img)
-        red_overlay[blocked_mask > 0] = [0, 0, 255]  # BGR format - Red
-        
-        # Blend the overlay with the original image (50% transparency)
-        alpha = 0.5
-        vis_img = cv2.addWeighted(vis_img, 1.0, red_overlay, alpha, 0)
-        
-        # Add borders to blocked areas
-        for x in range(0, width, PATH_STEP_SIZE):
-            if is_line_blocked(x, obstacles):
-                # Draw red border lines
-                cv2.line(vis_img, (x, 0), (x, height), (0, 0, 255), 2)
-                cv2.line(vis_img, (x + PATH_STEP_SIZE - 1, 0), (x + PATH_STEP_SIZE - 1, height), (0, 0, 255), 2)
+        # Draw semi-transparent lines for blocked paths
+        vis_img = draw_transparent_lines(vis_img, blocked_columns, height)
         
         # Draw center clearance indicator
         center_x = width // 2
@@ -193,6 +196,10 @@ def visualize_combined(image, obstacles, clear_paths, center_clearance, detectio
             cv2.line(vis_img, (center_x, height), (center_x, height - center_clearance), (0, 255, 255), 2)
             label_pos = (center_x + 5, height - center_clearance//2)
             cv2.putText(vis_img, f"{center_clearance}px", label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    
+    # Then draw custom red bounding boxes if enabled
+    if show_boxes:
+        vis_img = draw_custom_boxes(vis_img, obstacles)
     
     return vis_img
 
@@ -262,7 +269,7 @@ def main():
             # Create combined visualization with current toggle states
             combined_img = visualize_combined(
                 img_array, obstacles, clear_paths, center_clearance, 
-                processed_detections, category_index, show_paths, show_boxes
+                show_paths, show_boxes
             )
             
             # Print out the available paths (limiting frequency to avoid console spam)
