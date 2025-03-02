@@ -51,6 +51,9 @@ def main():
     # Create window for displaying the camera feed with detections
     cv2.namedWindow("Webots Object Detection", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Webots Object Detection", 800, 600)
+
+    # Add this line to make the window stay on top:
+    cv2.setWindowProperty("Webots Object Detection", cv2.WND_PROP_TOPMOST, 1)
     
     print("Starting object detection. Press 'q' in the CV window to exit.")
     
