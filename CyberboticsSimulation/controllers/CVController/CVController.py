@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Optimized Real-time Object Detection and Path Planning Controller
+Final Optimized Real-time Object Detection and Path Planning Controller
 """
 
 import sys
@@ -52,8 +52,9 @@ def detect_fn(detection_model, input_tensor):
     return detections
 
 def extract_obstacles_from_detections(detections, category_index, height, width):
-    """Extract obstacle coordinates from detection results"""
+    """Extract obstacle coordinates from detection results with class names"""
     obstacles = []
+    class_names = []
     
     # Process detection data
     num_detections = int(detections.pop('num_detections'))
@@ -88,8 +89,9 @@ def extract_obstacles_from_detections(detections, category_index, height, width)
                     ], dtype=int)
                     
                     obstacles.append(bbox)
+                    class_names.append(class_name)
     
-    return obstacles, detections
+    return obstacles, class_names, detections
 
 def is_line_blocked(x, obstacles):
     """Check if a vertical line at x intersects any obstacle."""
@@ -100,15 +102,28 @@ def is_line_blocked(x, obstacles):
             return True
     return False
 
-def get_blocked_columns(width, obstacles, step=PATH_STEP_SIZE):
-    """Get a list of blocked x-coordinates for efficient drawing"""
-    blocked_columns = []
+def find_blocked_path_segments(width, obstacles, step=PATH_STEP_SIZE):
+    """Find start and end points of blocked path segments for efficient drawing
+    Returns a list of tuples (start_x, end_x) for each blocked segment"""
+    blocked_segments = []
+    in_blocked_area = False
+    start_x = None
     
     for x in range(0, width, step):
         if is_line_blocked(x, obstacles):
-            blocked_columns.append(x)
-            
-    return blocked_columns
+            if not in_blocked_area:
+                start_x = x
+                in_blocked_area = True
+        else:
+            if in_blocked_area:
+                blocked_segments.append((start_x, x - step))
+                in_blocked_area = False
+    
+    # If we end in a blocked area, close the segment
+    if in_blocked_area:
+        blocked_segments.append((start_x, width - step))
+    
+    return blocked_segments
 
 def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     """Identify leftmost and rightmost x-coordinates of clear paths, centered at 0."""
@@ -117,11 +132,9 @@ def get_clear_paths(width, obstacles, step=PATH_STEP_SIZE):
     in_clear_area = False
     left_boundary = None
 
-    # Reuse blocked columns calculation
-    blocked_columns = set([x for x in range(0, width, step) if is_line_blocked(x, obstacles)])
-    
     for x in range(0, width, step):
-        if x not in blocked_columns:  # Clear path
+        is_blocked = is_line_blocked(x, obstacles)
+        if not is_blocked:  # Clear path
             if not in_clear_area:
                 left_boundary = x - half_width  # Convert to centered coordinates
                 in_clear_area = True
@@ -149,21 +162,34 @@ def get_central_clearance(height, width, obstacles):
     # Return the distance from the bottom to the obstacle
     return height - min_y_max if min_y_max != height else height
 
-def draw_transparent_lines(image, blocked_columns, height, alpha=0.6):
-    """Draw semi-transparent lines for blocked paths"""
+def draw_path_lines(image, blocked_segments, height, alpha=0.5):
+    """Draw transparent lines with solid borders for blocked paths"""
     # Create a separate image for the lines
     line_img = np.zeros_like(image)
+    border_img = np.zeros_like(image)
     
-    # Draw red lines on blocked columns
-    for x in blocked_columns:
-        cv2.line(line_img, (x, 0), (x, height), (0, 0, 255), 2)  # Red lines
+    for start_x, end_x in blocked_segments:
+        # Calculate the range of x values for this segment
+        segment_width = end_x - start_x + PATH_STEP_SIZE
+        
+        # Draw transparent lines for the entire blocked segment
+        for x in range(start_x, end_x + PATH_STEP_SIZE, PATH_STEP_SIZE):
+            cv2.line(line_img, (x, 0), (x, height), (0, 0, 255), 1)
+        
+        # Draw solid borders at the start and end of each blocked segment
+        cv2.line(border_img, (start_x, 0), (start_x, height), (0, 0, 255), 2)
+        cv2.line(border_img, (end_x + PATH_STEP_SIZE, 0), (end_x + PATH_STEP_SIZE, height), (0, 0, 255), 2)
     
-    # Blend with original image
-    return cv2.addWeighted(image, 1.0, line_img, alpha, 0)
+    # Blend the transparent lines
+    result = cv2.addWeighted(image, 1.0, line_img, alpha, 0)
+    # Add the solid borders (no transparency)
+    result = cv2.add(result, border_img)
+    
+    return result
 
-def draw_custom_boxes(image, obstacles):
-    """Draw red bounding boxes for obstacles"""
-    for bbox in obstacles:
+def draw_custom_boxes(image, obstacles, class_names):
+    """Draw red bounding boxes for obstacles with proper class names at bottom"""
+    for i, bbox in enumerate(obstacles):
         # Get corner points
         x_min, y_min = bbox.min(axis=0)
         x_max, y_max = bbox.max(axis=0)
@@ -171,24 +197,43 @@ def draw_custom_boxes(image, obstacles):
         # Draw red rectangle
         cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
         
-        # Add class label
-        cv2.putText(image, "Obstacle", (x_min, y_min - 5), 
+        # Add class label with proper name at the bottom
+        class_name = class_names[i] if i < len(class_names) else "Unknown"
+        # Capitalize the first letter for better appearance
+        class_name = class_name.capitalize()
+        
+        # Calculate text size to better position the label
+        (text_width, text_height), _ = cv2.getTextSize(
+            class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+        
+        # Position the text at the bottom of the box, centered horizontally
+        text_x = x_min + (x_max - x_min - text_width) // 2
+        text_y = y_max + text_height + 5  # 5 pixels below the box
+        
+        # Draw black background for better visibility
+        cv2.rectangle(image, 
+                     (text_x - 2, text_y - text_height - 2),
+                     (text_x + text_width + 2, text_y + 2),
+                     (0, 0, 0), -1)
+        
+        # Draw the text
+        cv2.putText(image, class_name, (text_x, text_y), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     
     return image
 
-def visualize_combined(image, obstacles, clear_paths, center_clearance, show_paths=True, show_boxes=True):
+def visualize_combined(image, obstacles, class_names, clear_paths, center_clearance, show_paths=True, show_boxes=True):
     """Visualize both detection and path planning results with toggleable elements"""
     vis_img = image.copy()
     height, width = image.shape[:2]
     
-    # Calculate blocked columns once for efficiency
-    blocked_columns = get_blocked_columns(width, obstacles) if show_paths else []
-    
     # First add path planning visualization if enabled
     if show_paths:
-        # Draw semi-transparent lines for blocked paths
-        vis_img = draw_transparent_lines(vis_img, blocked_columns, height)
+        # Find blocked path segments for more efficient drawing
+        blocked_segments = find_blocked_path_segments(width, obstacles)
+        
+        # Draw transparent lines with solid borders for blocked paths
+        vis_img = draw_path_lines(vis_img, blocked_segments, height)
         
         # Draw center clearance indicator
         center_x = width // 2
@@ -199,7 +244,7 @@ def visualize_combined(image, obstacles, clear_paths, center_clearance, show_pat
     
     # Then draw custom red bounding boxes if enabled
     if show_boxes:
-        vis_img = draw_custom_boxes(vis_img, obstacles)
+        vis_img = draw_custom_boxes(vis_img, obstacles, class_names)
     
     return vis_img
 
@@ -259,8 +304,9 @@ def main():
             input_tensor = tf.convert_to_tensor(np.expand_dims(img_array, 0), dtype=tf.float32)
             detections = detect_fn(detection_model, input_tensor)
             
-            # Extract obstacles from detections
-            obstacles, processed_detections = extract_obstacles_from_detections(detections, category_index, height, width)
+            # Extract obstacles from detections with class names
+            obstacles, class_names, processed_detections = extract_obstacles_from_detections(
+                detections, category_index, height, width)
             
             # Calculate path planning
             clear_paths = get_clear_paths(width, obstacles)
@@ -268,7 +314,7 @@ def main():
             
             # Create combined visualization with current toggle states
             combined_img = visualize_combined(
-                img_array, obstacles, clear_paths, center_clearance, 
+                img_array, obstacles, class_names, clear_paths, center_clearance, 
                 show_paths, show_boxes
             )
             
