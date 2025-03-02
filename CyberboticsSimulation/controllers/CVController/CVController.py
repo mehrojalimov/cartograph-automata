@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Real-time Object Detection with Webots Camera
-This script uses a TensorFlow object detection model to process frames from a Webots robot camera.
-
-Based on code by Rokawoo
+Real-time Object Detection with Webots Camera for TensorFlow 2.x
 """
 
+import sys
 import os
+# Make sure this is the first thing in your script
+sys.path.insert(0, "C:/Users/rokaw/GitProjects/Codefest2025 - TEMP/CVObjectDetection/Tensorflow/models/research")
+
+
 import time
 import cv2
 import numpy as np
@@ -21,17 +23,17 @@ from object_detection.utils import config_util
 
 # User Configuration Variables
 TIME_STEP = 32
-MODEL_PATH = "PATH_TO_YOUR_MODEL"  # Replace with the path to your model directory
-CHECKPOINT_NUMBER = 14  # Replace with your checkpoint number
-LABEL_MAP_PATH = "PATH_TO_YOUR_LABELMAP"  # Replace with the path to your label map
-DETECTION_THRESHOLD = 0.7  # Minimum confidence score for detecting objects
+MODEL_PATH = "C:/Users/rokaw/GitProjects/Codefest2025 - TEMP/CVObjectDetection/Tensorflow/workspace/models/codefest_2025_ssd_mobilenet_v1_fpn"
+CHECKPOINT_NUMBER = 14
+LABEL_MAP_PATH = "C:/Users/rokaw/GitProjects/Codefest2025 - TEMP/CVObjectDetection/Tensorflow/workspace/annotations/label_map.pbtxt"
+DETECTION_THRESHOLD = 0.7
 
 def main():
     # Initialize Webots robot
     robot = Robot()
     
     # Get camera and enable it
-    camera = robot.getDevice("camera rgb")  # Using the RGB camera from your robot
+    camera = robot.getDevice("camera rgb")
     camera.enable(TIME_STEP)
     
     # Get the width and height of the camera
@@ -40,7 +42,7 @@ def main():
     print(f"Camera resolution: {width}x{height}")
     
     # Load the object detection model
-    detection_function = load_model(MODEL_PATH, CHECKPOINT_NUMBER)
+    detection_model = load_model(MODEL_PATH, CHECKPOINT_NUMBER)
     
     # Load the label map
     category_index = label_map_util.create_category_index_from_labelmap(
@@ -66,7 +68,8 @@ def main():
             img_array = cv2.cvtColor(img_array, cv2.COLOR_BGRA2BGR)
             
             # Perform object detection
-            detections = detect_objects(detection_function, img_array)
+            input_tensor = tf.convert_to_tensor(np.expand_dims(img_array, 0), dtype=tf.float32)
+            detections = detect_fn(detection_model, input_tensor)
             
             # Visualize the detections
             image_with_detections = visualize_detections(img_array, detections, category_index)
@@ -90,7 +93,6 @@ def main():
         cv2.destroyAllWindows()
         print("Exit complete.")
 
-
 def load_model(model_path, checkpoint_number):
     """Load the object detection model from a checkpoint."""
     print(f"Loading model from {model_path}, checkpoint {checkpoint_number}...")
@@ -105,41 +107,27 @@ def load_model(model_path, checkpoint_number):
     ckpt = tf.compat.v2.train.Checkpoint(model=detection_model)
     ckpt.restore(ckpt_path).expect_partial()
     
-    @tf.function
-    def detect_fn(image):
-        image, shapes = detection_model.preprocess(image)
-        prediction_dict = detection_model.predict(image, shapes)
-        detections = detection_model.postprocess(prediction_dict, shapes)
-        return detections
-    
-    print("Model loaded successfully")
-    return detect_fn
+    return detection_model
 
-
-def detect_objects(detection_function, image_np):
-    """Perform object detection on the input image."""
-    # Convert image to tensor
-    input_tensor = tf.convert_to_tensor(np.expand_dims(image_np, 0), dtype=tf.float32)
-    
-    # Run inference
-    detections = detection_function(input_tensor)
-    
-    # Process the detections
-    num_detections = int(detections.pop('num_detections'))
-    detections = {key: value[0, :num_detections].numpy()
-                  for key, value in detections.items()}
-    detections['num_detections'] = num_detections
-    
-    # Convert detection classes to ints
-    detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
-    
+@tf.function
+def detect_fn(detection_model, input_tensor):
+    """Detection function that processes the input image and returns detections."""
+    image, shapes = detection_model.preprocess(input_tensor)
+    prediction_dict = detection_model.predict(image, shapes)
+    detections = detection_model.postprocess(prediction_dict, shapes)
     return detections
-
 
 def visualize_detections(image_np, detections, category_index):
     """Visualize the detection results on the image."""
     # Create a copy of the image for visualization
     image_np_with_detections = image_np.copy()
+    
+    # Process detection data
+    num_detections = int(detections.pop('num_detections'))
+    detections = {key: value[0, :num_detections].numpy()
+                 for key, value in detections.items()}
+    detections['num_detections'] = num_detections
+    detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
     
     # Visualize the boxes and labels on the image
     viz_utils.visualize_boxes_and_labels_on_image_array(
@@ -155,7 +143,6 @@ def visualize_detections(image_np, detections, category_index):
     )
     
     return image_np_with_detections
-
 
 if __name__ == "__main__":
     main()
