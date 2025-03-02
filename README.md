@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="demos/S1.png" alt="Demo Image 1" align="center" width="400px"/>
-  <img src="demos/S2.png" alt="Demo Image 2" align="center" width="400px"/>
+  <img src="ReadmeImages/S1.png" alt="Demo Image 1" align="center" width="400px"/>
+  <img src="ReadmeImages/S2.png" alt="Demo Image 2" align="center" width="400px"/>
   <h1>Cartograph Automata</h1>
   <p>By Rokawoo, Khoi, Arya, Mehroj</p>
 </div>
@@ -25,19 +25,19 @@ The system's ability to decide when to deviate from programmed paths and when to
 ## Project Media
 
 <div align="center">
-  <img src="/demos/seq1_center_20250228-043837.png" alt="D1" width="400px"/>
-  <img src="/demos/seq37_center_20250228-042041.png" alt="D2" width="400px"/>
-  <img src="/demos/seq34_left_20250228-043507.png" alt="D3" width="400px"/>
-  <img src="/demos/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
+  <img src="/ReadmeImages/seq1_center_20250228-043837.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/seq37_center_20250228-042041.png" alt="D2" width="400px"/>
+  <img src="/ReadmeImages/seq34_left_20250228-043507.png" alt="D3" width="400px"/>
+  <img src="/ReadmeImages/seq2_center_20250228-035304.png" alt="D4" width="400px"/>
 </div>
 
 ## Obejct Detection
 
 <div align="center">
-  <img src="/demos/object_detection2.png" alt="D1" width="400px"/>
-  <img src="/demos/object_detection3.png" alt="D1" width="400px"/>
-  <img src="/demos/object_detection4.png" alt="D1" width="400px"/>
-  <img src="/demos/object_detection5.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/object_detection2.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/object_detection3.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/object_detection4.png" alt="D1" width="400px"/>
+  <img src="/ReadmeImages/object_detection5.png" alt="D1" width="400px"/>
 </div>
 
 ## :mag: Key Features
