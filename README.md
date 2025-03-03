@@ -1,7 +1,7 @@
 <div align="center">
   <img src="ReadmeImages/S1.png" alt="Demo Image 1" align="center" width="400px"/>
   <img src="ReadmeImages/S2.png" alt="Demo Image 2" align="center" width="400px"/>
-  <h1>Cartograph Automata</h1>
+  <h1>Cartograph Automation</h1>
   <p>By Rokawoo, Khoi, Arya, Mehroj</p>
 </div>
 
@@ -12,7 +12,7 @@
 
 ## Abstract
 
-Current AMR navigation relies heavily on basic sensor systems like LIDAR and ultrasonic sensors, which simply detect obstacles and follow predetermined rules without true environmental understanding. Cartograph Automata bridges this gap by creating a hybrid system where computer vision not only detects obstacles but intelligently interprets the environment to make contextual decisions. 
+Current AMR navigation relies heavily on basic sensor systems like LIDAR and ultrasonic sensors, which simply detect obstacles and follow predetermined rules without true environmental understanding. Cartograph Automation bridges this gap by creating a hybrid system where computer vision not only detects obstacles but intelligently interprets the environment to make contextual decisions. 
 
 By translating visual data into movement commands, our model enables robots to safely navigate around obstacles and people in real-time, even when encountering previously unseen scenarios. This proof-of-concept demonstrates how CV-enhanced navigation significantly improves safety and efficiency in both warehouse, public settings, and applications beyond, allowing AMRs to dynamically adapt to changing conditions while maintaining operational objectives.
 
